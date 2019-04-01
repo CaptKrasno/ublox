@@ -772,10 +772,22 @@ class UbloxFirmware7Plus : public UbloxFirmware {
     if (((m.valid & valid_time) == valid_time) &&
         (m.flags2 & m.FLAGS2_CONFIRMED_AVAILABLE)) {
       // Use NavPVT timestamp since it is valid
-      fix.header.stamp.sec = toUtcSeconds(m);
-      fix.header.stamp.nsec = m.nano;
+
+      int32_t nano =  m.nano;
+      long sec = toUtcSeconds(m);
+      // nano from NavPVT is signed and is sometimes negative.  Ros needs it to be positive,
+      // this while loop does the subtraction properly.
+      while(nano<0){
+          nano += 1e9;
+          sec--;
+      }
+      fix.header.stamp.sec = uint32_t(sec);
+      fix.header.stamp.nsec = uint32_t(nano);
+      //std::cout << "corrected nano: " << nano << " nano: " <<m.nano <<std::endl;
+
     } else {
       // Use ROS time since NavPVT timestamp is not valid
+      ROS_WARN("time not vaild using ros::Time::Now");
       fix.header.stamp = ros::Time::now();
     }
     // Set the LLA
@@ -804,6 +816,13 @@ class UbloxFirmware7Plus : public UbloxFirmware {
     fix.position_covariance_type =
         sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
+//    std::cout << (ros::Time::now().toSec()-fix.header.stamp.toSec() ) << std::endl;
+//    std::cout << m.year << " : " << int(m.month) << " : " << int(m.day) << " : " << int(m.hour) << " : " << int(m.min) << " : " << int(m.sec) << std::endl;
+    double time_error = ros::Time::now().toSec()-fix.header.stamp.toSec();
+    //ROS_INFO("ROS Time diverges from GPS time by %f sec",time_error);
+    if(fabs(time_error)>0.2){
+        ROS_WARN("ROS Time diverges from GPS time by %f sec",time_error);
+    }
     fixPublisher.publish(fix);
 
     //

@@ -712,6 +712,7 @@ void UbloxFirmware6::callbackNavPosLlh(const ublox_msgs::NavPOSLLH& m) {
   else
     fix_.header.stamp = ros::Time::now(); // new timestamp
 
+
   fix_.header.frame_id = frame_id;
   fix_.latitude = m.lat * 1e-7;
   fix_.longitude = m.lon * 1e-7;
@@ -733,6 +734,7 @@ void UbloxFirmware6::callbackNavPosLlh(const ublox_msgs::NavPOSLLH& m) {
       sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
   fix_.status.service = fix_.status.SERVICE_GPS;
+  std::cout << "nav time: " << fix_.header.stamp << std::endl;
   fixPublisher.publish(fix_);
   last_nav_pos_ = m;
   //  update diagnostics
